@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Notary AI — Proof Verification</title>
+  <style>
+    :root { --bg:#0b0f17; --card:#121826; --b:#232d42; --t:#f3f4f6; --m:#9ca3af; --a:#3b82f6; --ok:#10b981; --err:#ef4444; }
+    * { box-sizing:border-box; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+    body { margin:0; min-height:100vh; background:var(--bg); color:var(--t); display:flex; align-items:center; justify-content:center; padding:24px; }
+    .wrap { width:100%; max-width:680px; display:grid; gap:18px; }
+    .card { background:var(--card); border:1px solid var(--b); border-radius:16px; padding:28px; box-shadow:0 20px 50px rgba(0,0,0,.45); }
+    .tag { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--a); background:rgba(59,130,246,.12); border:1px solid rgba(59,130,246,.3); padding:4px 10px; border-radius:99px; margin-bottom:10px; }
+    h1 { margin:0 0 6px; font-size:24px; }
+    h2 { margin:0 0 8px; font-size:16px; }
+    p { margin:0 0 18px; color:var(--m); font-size:14px; line-height:1.5; }
+    .row { display:flex; gap:10px; }
+    input, textarea { width:100%; background:var(--bg); border:1px solid var(--b); color:var(--t); padding:12px 14px; border-radius:10px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px; outline:none; }
+    input:focus, textarea:focus { border-color:var(--a); }
+    button { background:var(--a); color:#fff; border:none; padding:12px 20px; border-radius:10px; font-weight:600; font-size:13px; cursor:pointer; white-space:nowrap; }
+    button.sec { background:#1e293b; border:1px solid var(--b); }
+    button:hover { opacity:.92; }
+    .res { margin-top:16px; padding:14px; border-radius:10px; background:var(--bg); border:1px solid var(--b); display:none; font-size:13px; }
+    .badge { display:inline-block; padding:3px 10px; border-radius:99px; font-weight:600; font-size:12px; margin-bottom:8px; }
+    .ok { background:rgba(16,185,129,.15); color:var(--ok); }
+    .err { background:rgba(239,68,68,.15); color:var(--err); }
+    pre { margin:8px 0 0; white-space:pre-wrap; word-break:break-all; color:var(--m); font-family:ui-monospace,monospace; font-size:12px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <span class="tag">APUMIA AI FUND • SELF-SOVEREIGN ZERO-PII</span>
+    <h1>Notary AI — Proof Verification</h1>
+    <p>Self-sovereign cryptographic proof registry. Enter a SHA-256 hash or action ID to verify existence and WORM chain integrity.</p>
+    <form class="row" onsubmit="verifyProof(event)">
+      <input id="q" maxlength="128" placeholder="Paste audit_hash (64 hex chars) or act-..." required />
+      <button type="submit">Verify Proof</button>
+    </form>
+    <div id="verifyOut" class="res"></div>
+  </div>
+  <div class="card">
+    <h2>Interactive Sandbox (Client-Side Web Crypto SHA-256)</h2>
+    <p>Enter any agent payload or document text: your browser computes SHA-256 locally (Zero-PII), appends it to the WORM chain, and fills the verifier above.</p>
+    <textarea id="payload" rows="2">{"agent":"verigate-guard","action":"swap","amount_usd":150000}</textarea>
+    <div class="row" style="margin-top:10px;">
+      <button type="button" onclick="stampTest()">Stamp Record</button>
+      <button type="button" class="sec" onclick="tamperTest()">Simulate Tamper</button>
+    </div>
+    <div id="stampOut" class="res"></div>
+  </div>
+</div>
+<script>
+const CHAIN = [];
+async function sha256(s) {
+  const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, "0")).join("");
+}
+async function checkChain() {
+  let prev = null;
+  for (const r of CHAIN) {
+    if (r.prev_audit_hash !== prev) return false;
+    const exp = await sha256(JSON.stringify({ action_id: r.action_id, subject_hash: r.subject_hash, prev_audit_hash: r.prev_audit_hash, ts: r.timestamp_utc }));
+    if (exp !== r.audit_hash) return false;
+    prev = r.audit_hash;
+  }
+  return true;
+}
+async function stampTest() {
+  const raw = document.getElementById("payload").value.trim();
+  if (!raw) return;
+  const subject_hash = await sha256(raw);
+  const prev_audit_hash = CHAIN.length ? CHAIN[CHAIN.length - 1].audit_hash : null;
+  const action_id = "act-" + (await sha256(subject_hash + Date.now())).slice(0, 24);
+  const timestamp_utc = new Date().toISOString();
+  const audit_hash = await sha256(JSON.stringify({ action_id, subject_hash, prev_audit_hash, ts: timestamp_utc }));
+  const rec = { action_id, subject_hash, prev_audit_hash, audit_hash, timestamp_utc, zero_pii: true };
+  CHAIN.push(rec);
+  document.getElementById("q").value = audit_hash;
+  const out = document.getElementById("stampOut");
+  out.style.display = "block";
+  out.innerHTML = `<span class="badge ok">✓ STAMPED TO WORM CHAIN (#${CHAIN.length})</span><pre>${JSON.stringify(rec, null, 2)}</pre>`;
+}
+async function tamperTest() {
+  if (!CHAIN.length) await stampTest();
+  CHAIN.subject_hash = "0".repeat(64);
+  await verifyProof();
+}
+async function verifyProof(e) {
+  if (e) e.preventDefault();
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const out = document.getElementById("verifyOut");
+  out.style.display = "block";
+  const valid = await checkChain();
+  const rec = CHAIN.find(r => r.audit_hash === q || r.subject_hash === q || r.action_id === q);
+  if (rec && valid) out.innerHTML = `<span class="badge ok">✓ PROOF VERIFIED IN REGISTRY</span><div>Full WORM Chain Integrity: <b>true</b> (${CHAIN.length})</div><pre>${JSON.stringify(rec, null, 2)}</pre>`;
+  else if (rec && !valid) out.innerHTML = `<span class="badge err">✕ CHAIN TAMPERING DETECTED</span><div>Full WORM Chain Integrity: <b>false</b></div><pre>${JSON.stringify(rec, null, 2)}</pre>`;
+  else out.innerHTML = `<span class="badge err">✕ RECORD NOT FOUND IN REGISTRY</span>`;
+}
+stampTest();
+</script>
+</body>
+</html>
