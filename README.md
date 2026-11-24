@@ -1,17 +1,12 @@
----
-title: Notary AI
-emoji: 🛡️
-colorFrom: blue
-colorTo: slate
-sdk: docker
-app_port: 7860
-pinned: false
----
+# Notary AI — Cryptographic Proof & Verification CLI
 
-# Notary AI — Cryptographic Proof & Verification Node
+Zero-dependency, Zero-PII immutable WORM audit trail for autonomous AI agents.
+Live Node: **https://apumia.space** · Manifest: **https://apumia.space**
 
-Zero-dependency, memory-safe proof registry for AI agents.
-- **Public Verification UI:** `GET /`
-- **Verify API:** `GET /api/verify?q=<sha256_or_action_id>`
-- **Chain Head Checkpoint:** `GET /api/head`
-- **Stamp API (Protected):** `POST /api/stamp` (`Authorization: Bearer <NOTARY_API_KEY>`)
+## Quick Start
+- Hash a file: `python3 apumia-notary-cli.py hash ./agent_log.json`
+- Verify receipt: `python3 apumia-notary-cli.py verify act-115ff9bf9870ade5ab7255a5`
+- Stamp digest: `NOTARY_API_KEY=... python3 apumia-notary-cli.py stamp ./agent_log.json --agent-id agent-1`
+
+## Self-Hosted Private Node ($99)
+Deploy your own sovereign Notary AI node on Cloudflare Workers + D1 in 5 minutes (full source code + `deploy.sh` + commercial license). Visit **https://apumia.space** to get the Self-Hosted Kit.
