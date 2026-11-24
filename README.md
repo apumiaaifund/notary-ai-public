@@ -9,4 +9,4 @@ Live Node: **https://apumia.space** · Manifest: **https://apumia.space**
 - Stamp digest: `NOTARY_API_KEY=... python3 apumia-notary-cli.py stamp ./agent_log.json --agent-id agent-1`
 
 ## Self-Hosted Private Node ($99)
-Deploy your own sovereign Notary AI node on Cloudflare Workers + D1 in 5 minutes (full source code + `deploy.sh` + commercial license). Visit **https://apumia.space** to get the Self-Hosted Kit.
+Deploy your own sovereign Notary AI node on Cloudflare Workers + D1 in 5 minutes (full source code + `deploy.sh` + commercial license). Get the Self-Hosted Kit directly: **[Buy Self-Hosted Kit ($99) ↗](https://lava.top)**
